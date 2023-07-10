@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use chrono::{Datelike, NaiveDate};
 
-struct RepublicanDate {
+pub struct RepublicanDate {
     year: u32,
     date: u32, // 0-indexed
 }
