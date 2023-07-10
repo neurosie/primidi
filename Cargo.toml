@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 chrono = "0.4.26"
+csv = "1.2.2"
 dotenvy = "0.15.7"
 eggbug = { git = "https://github.com/iliana/eggbug-rs" }
 reqwest = { version = "0.11.18", features = ["blocking"] }

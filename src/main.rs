@@ -9,6 +9,20 @@ use date::RepublicanDate;
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenvy::dotenv()?;
 
+    // get today's date and the theme data
+    let today: RepublicanDate = Utc::now().date_naive().into();
+
+    let mut reader = csv::ReaderBuilder::new()
+        .has_headers(false)
+        .from_path("themes.csv")?;
+    let record = reader
+        .records()
+        .nth(today.date as usize)
+        .expect("csv did not have the expected date row")?;
+    let theme = &record[0];
+    let image_desc_url = &record[1];
+    let image_src_url = &record[2];
+
     // download image
     let client = reqwest::Client::builder()
         .user_agent(format!(
@@ -16,13 +30,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             &env::var("COHOST_EMAIL")?
         ))
         .build()?;
-    let image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Crocus_Sativus_-_Zaffrano_domestico_-_Saffron._%28saffron_crocus%3B_field_crocus%29_%28NYPL_b14444147-1130719%29.tiff/lossy-page1-1521px-Crocus_Sativus_-_Zaffrano_domestico_-_Saffron._%28saffron_crocus%3B_field_crocus%29_%28NYPL_b14444147-1130719%29.tiff.jpg";
 
-    let response = client.get(image_url).send().await?;
+    let response = client.get(image_src_url).send().await?;
     assert_eq!(response.status(), reqwest::StatusCode::OK);
 
     let image_data = response.bytes().await?;
-
     assert!(image_data.len() <= 5_000_000);
 
     // log in to cohost
@@ -32,13 +44,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // make the post
     let date: RepublicanDate = NaiveDate::from_ymd_opt(2022, 9, 23).unwrap().into();
-    let theme = "saffron";
-    let title = format!("Today is {date}, celebrating {theme}.");
+    let title = if theme.is_empty() {
+        format!("Today is {date}.")
+    } else {
+        format!("Today is {date}, celebrating {theme}.")
+    };
+    // TODO: alt text format for celebration days
     let alt_text = format!("Illustration of {theme}");
+    let mut tags = vec!["french republican calendar".to_owned()];
+    if !theme.is_empty() {
+        tags.push(theme.strip_prefix("the ").unwrap_or(theme).to_owned());
+    }
 
     let mut post = eggbug::Post {
         headline: title,
-        markdown: format!("[(image source)]({image_url})"),
+        markdown: format!(
+            r#"<div style="display:flex;justify-content:center;font-size:0.8rem"><a href="{image_desc_url}">[image source]</a></div>"#
+        ),
         attachments: vec![eggbug::Attachment::new(
             image_data,
             "image.jpg".into(),
@@ -47,7 +69,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             /* height */ None,
         )
         .with_alt_text(alt_text)],
-        draft: true,
+        tags,
         ..Default::default()
     };
 

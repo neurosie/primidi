@@ -3,8 +3,8 @@ use std::fmt::Display;
 use chrono::{Datelike, NaiveDate};
 
 pub struct RepublicanDate {
-    year: u32,
-    date: u32, // 0-indexed
+    pub year: u32,
+    pub date: u32, // 0-indexed
 }
 
 const WEEKDAYS: [&str; 10] = [
